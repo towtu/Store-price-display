@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="manifest" href="manifest.json">
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #f0f2f5; }
+        .card { background: white; padding: 2rem; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; width: 80%; }
+        h1 { color: #ff5722; margin: 0; }
+        #product-name { font-size: 1.2rem; color: #555; margin-top: 10px; }
+        #price { font-size: 3.5rem; font-weight: bold; color: #2e7d32; margin: 20px 0; }
+        .status { font-size: 0.8rem; color: #999; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>Chiekoi Store</h1>
+        <div id="product-name">Scanning...</div>
+        <div id="price">--</div>
+        <div id="status" class="status">Online</div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-database-compat.js"></script>
+    <script>
+        const firebaseConfig = { /* PASTE YOUR CONFIG HERE */ };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        firebase.database().goOnline(); 
+
+        if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/sw.js'); }
+
+        const productId = new URLSearchParams(window.location.search).get('id');
+        if (productId) {
+            db.ref('products/' + productId).on('value', snap => {
+                const data = snap.val();
+                if (data) {
+                    document.getElementById('product-name').innerText = data.n;
+                    document.getElementById('price').innerText = "₱" + data.p;
+                }
+            });
+        }
+
+        window.addEventListener('offline', () => document.getElementById('status').innerText = "Offline Mode");
+    </script>
+</body>
+</html>

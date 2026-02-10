@@ -1,0 +1,15 @@
+{
+  "short_name": "Chiekoi",
+  "name": "Chiekoi Store Price Checker",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3724/3724720.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "start_url": "/index.html",
+  "display": "standalone",
+  "theme_color": "#ff5722",
+  "background_color": "#ffffff"
+}

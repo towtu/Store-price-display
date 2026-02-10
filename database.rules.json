@@ -1,0 +1,8 @@
+{
+  "rules": {
+    "products": {
+      ".read": true,
+      ".write": "auth != null && auth.uid == 'YOUR_UNIQUE_ID'"
+    }
+  }
+}

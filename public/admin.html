@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { font-family: sans-serif; padding: 20px; max-width: 400px; margin: auto; }
+        input { width: 100%; padding: 12px; margin: 8px 0; box-sizing: border-box; border: 1px solid #ccc; border-radius: 8px; }
+        button { width: 100%; padding: 12px; background: #ff5722; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        .login-btn { background: #333; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <h2>Chiekoi Admin</h2>
+    <button class="login-btn" onclick="login()">1. Admin Login</button>
+    <hr>
+    <input type="text" id="id" placeholder="Product ID (e.g., p01)">
+    <input type="text" id="name" placeholder="Item Name">
+    <input type="number" id="price" placeholder="Price (Pesos)">
+    <button onclick="update()">2. Update Price</button>
+
+    <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-auth-compat.js"></script>
+    <script>
+        const firebaseConfig = { /* PASTE YOUR CONFIG HERE */ };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        function login() {
+            const email = prompt("Admin Email:");
+            const pass = prompt("Password:");
+            firebase.auth().signInWithEmailAndPassword(email, pass)
+                .then(() => alert("Access Granted"))
+                .catch(() => alert("Denied"));
+        }
+
+        function update() {
+            const id = document.getElementById('id').value;
+            const n = document.getElementById('name').value;
+            const p = document.getElementById('price').value;
+            
+            if(!firebase.auth().currentUser) return alert("Login first!");
+
+            db.ref('products/' + id).set({ n, p: parseFloat(p) })
+                .then(() => alert("Updated " + n))
+                .catch(err => alert("Error: " + err.message));
+        }
+    </script>
+</body>
+</html>
