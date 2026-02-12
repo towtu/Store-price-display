@@ -2,46 +2,134 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="manifest" href="manifest.json">
+    <title>Chiekoi Price List</title>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #f0f2f5; }
-        .card { background: white; padding: 2rem; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; width: 80%; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; margin: 0; padding: 20px; }
+        
+        .header { text-align: center; margin-bottom: 20px; }
         h1 { color: #ff5722; margin: 0; }
-        #product-name { font-size: 1.2rem; color: #555; margin-top: 10px; }
-        #price { font-size: 3.5rem; font-weight: bold; color: #2e7d32; margin: 20px 0; }
-        .status { font-size: 0.8rem; color: #999; }
+        
+        .search-box { width: 100%; padding: 15px; border: 2px solid #ddd; border-radius: 30px; font-size: 1.1rem; box-shadow: 0 4px 6px rgba(0,0,0,0.05); box-sizing: border-box; outline: none; margin-top:10px;}
+        .search-box:focus { border-color: #ff5722; }
+
+        .category-section { margin-top: 30px; }
+        .category-title { font-size: 1.2rem; font-weight: bold; color: #444; margin-bottom: 10px; border-bottom: 2px solid #ff5722; display: inline-block; padding-bottom: 5px; }
+        
+        .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+        
+        .item-card { background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); text-align: center; }
+        .item-name { display: block; font-weight: 500; color: #333; margin-bottom: 5px; font-size: 0.95rem; }
+        
+        .item-price { font-weight: bold; color: #2e7d32; font-size: 1.1rem; }
+        .item-unit { display: block; font-size: 0.8rem; color: #888; margin-top: 2px; } /* NEW STYLE */
+
+        .offline-badge { background: #ffebee; color: #c62828; padding: 5px 10px; border-radius: 15px; font-weight: bold; display: none; text-align: center; margin-bottom: 15px; }
     </style>
 </head>
 <body>
-    <div class="card">
+
+    <div class="header">
         <h1>Chiekoi Store</h1>
-        <div id="product-name">Scanning...</div>
-        <div id="price">--</div>
-        <div id="status" class="status">Online</div>
+        <div id="offline-badge" class="offline-badge">⚡ You are Offline</div>
+        <input type="text" id="search" class="search-box" placeholder="🔍 Search for item..." onkeyup="filterList()">
+    </div>
+
+    <div id="main-container">
+        <div style="text-align:center; margin-top:50px;">Loading products...</div>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-database-compat.js"></script>
+
     <script>
-        const firebaseConfig = { /* PASTE YOUR CONFIG HERE */ };
+        const firebaseConfig = {
+            apiKey: "AIzaSyBzigjOzW9bnctbWByO4Q69qvJdPY7HoJE",
+            authDomain: "chiekoy-store.firebaseapp.com",
+            databaseURL: "https://chiekoy-store-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "chiekoy-store",
+            storageBucket: "chiekoy-store.firebasestorage.app",
+            messagingSenderId: "1071245303408",
+            appId: "1:1071245303408:web:1ff9b43b6f41192c079eb5",
+            measurementId: "G-ZMBDDEGE6N"
+        };
+
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
         firebase.database().goOnline(); 
 
-        if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/sw.js'); }
+        let allProducts = [];
+        
+        const CATEGORY_ORDER = [
+            "Beverages", "Powdered Drinks", "Chips", "Packaged Snacks", 
+            "Small Chicherya", "Candies", "Cooking", "Clothes Soap", 
+            "Hygiene", "Medicine", "Others"
+        ];
 
-        const productId = new URLSearchParams(window.location.search).get('id');
-        if (productId) {
-            db.ref('products/' + productId).on('value', snap => {
-                const data = snap.val();
-                if (data) {
-                    document.getElementById('product-name').innerText = data.n;
-                    document.getElementById('price').innerText = "₱" + data.p;
+        db.ref('products').on('value', (snapshot) => {
+            allProducts = [];
+            if (snapshot.exists()) {
+                snapshot.forEach((child) => {
+                    const data = child.val();
+                    allProducts.push({
+                        name: data.n, 
+                        price: data.p, 
+                        unit: data.u || "", // Get the unit/note
+                        category: data.c || "Others" 
+                    });
+                });
+            }
+            renderList(allProducts);
+        });
+
+        function renderList(items) {
+            const container = document.getElementById('main-container');
+            container.innerHTML = "";
+
+            if (items.length === 0) {
+                container.innerHTML = "<div style='text-align:center; padding:20px;'>No items found.</div>";
+                return;
+            }
+
+            CATEGORY_ORDER.forEach(catName => {
+                const catItems = items.filter(item => item.category === catName);
+
+                if (catItems.length > 0) {
+                    let sectionHtml = `
+                        <div class="category-section">
+                            <div class="category-title">${catName}</div>
+                            <div class="product-grid">
+                    `;
+                    
+                    catItems.forEach(item => {
+                        // Only show unit if it exists
+                        const unitHtml = item.unit ? `<span class="item-unit">(${item.unit})</span>` : "";
+
+                        sectionHtml += `
+                            <div class="item-card">
+                                <span class="item-name">${item.name}</span>
+                                <span class="item-price">₱${item.price}</span>
+                                ${unitHtml} 
+                            </div>
+                        `;
+                    });
+
+                    sectionHtml += `</div></div>`;
+                    container.innerHTML += sectionHtml;
                 }
             });
         }
 
-        window.addEventListener('offline', () => document.getElementById('status').innerText = "Offline Mode");
+        function filterList() {
+            const query = document.getElementById('search').value.toLowerCase();
+            const filtered = allProducts.filter(item => 
+                item.name.toLowerCase().includes(query)
+            );
+            renderList(filtered);
+        }
+
+        if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/sw.js'); }
+        window.addEventListener('online', () => document.getElementById('offline-badge').style.display='none');
+        window.addEventListener('offline', () => document.getElementById('offline-badge').style.display='block');
     </script>
 </body>
 </html>

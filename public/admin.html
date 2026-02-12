@@ -2,48 +2,148 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chiekoi Admin</title>
     <style>
-        body { font-family: sans-serif; padding: 20px; max-width: 400px; margin: auto; }
-        input { width: 100%; padding: 12px; margin: 8px 0; box-sizing: border-box; border: 1px solid #ccc; border-radius: 8px; }
-        button { width: 100%; padding: 12px; background: #ff5722; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
-        .login-btn { background: #333; margin-bottom: 20px; }
+        body { font-family: sans-serif; padding: 20px; max-width: 600px; margin: auto; background-color: #f4f4f9; }
+        .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        input, select { width: 100%; padding: 12px; margin: 8px 0; box-sizing: border-box; border: 1px solid #ccc; border-radius: 6px; }
+        button { width: 100%; padding: 12px; margin-top: 10px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .btn-green { background: #2e7d32; color: white; }
+        .btn-blue { background: #1976d2; color: white; }
+        .btn-edit { background: #ff9800; color: white; width: auto; padding: 5px 15px; }
+        
+        #debug-log { background: #333; color: #0f0; padding: 10px; font-family: monospace; font-size: 12px; margin-top: 20px; border-radius: 5px; }
     </style>
 </head>
 <body>
-    <h2>Chiekoi Admin</h2>
-    <button class="login-btn" onclick="login()">1. Admin Login</button>
-    <hr>
-    <input type="text" id="id" placeholder="Product ID (e.g., p01)">
-    <input type="text" id="name" placeholder="Item Name">
-    <input type="number" id="price" placeholder="Price (Pesos)">
-    <button onclick="update()">2. Update Price</button>
+
+    <div id="login-card" class="card">
+        <h3>🔐 Chiekoi Admin Login</h3>
+        <input type="email" id="email" placeholder="Enter your email">
+        <input type="password" id="password" placeholder="Enter your password">
+        <button class="btn-blue" onclick="tryLogin()">Login</button>
+    </div>
+
+    <div id="admin-panel" class="card" style="display:none;">
+        <h3>✅ Manage Products</h3>
+        
+        <input type="hidden" id="productId">
+        
+        <label>Category:</label>
+        <select id="p-cat">
+            <option value="Candies">Candies / Chocolates</option> <option value="Beverages">Beverages</option>
+            <option value="Powdered Drinks">Powdered Drinks</option>
+            <option value="Chips">Chips</option>
+            <option value="Packaged Snacks">Packaged Snacks</option>
+            <option value="Small Chicherya">Small Chicherya</option>
+            <option value="Cooking">Cooking Necessities</option>
+            <option value="Clothes Soap">Clothes Soap</option>
+            <option value="Hygiene">Hygiene</option>
+            <option value="Medicine">Medicine</option>
+            <option value="Others">Others</option>
+        </select>
+
+        <input type="text" id="p-name" placeholder="Product Name (e.g. Maxx)">
+        
+        <input type="text" id="p-unit" placeholder="Quantity Note (e.g. 4 pcs, or 1 pack)">
+        
+        <input type="number" id="p-price" placeholder="Price (e.g. 5)">
+        
+        <button class="btn-green" onclick="saveProduct()">Save / Update</button>
+        
+        <hr>
+        <h4>Current Inventory</h4>
+        <div id="product-list">Loading...</div>
+    </div>
+
+    <div id="debug-log">System Status: Waiting...</div>
 
     <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-auth-compat.js"></script>
+    
     <script>
-        const firebaseConfig = { /* PASTE YOUR CONFIG HERE */ };
+        const firebaseConfig = {
+            apiKey: "AIzaSyBzigjOzW9bnctbWByO4Q69qvJdPY7HoJE",
+            authDomain: "chiekoy-store.firebaseapp.com",
+            databaseURL: "https://chiekoy-store-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "chiekoy-store",
+            storageBucket: "chiekoy-store.firebasestorage.app",
+            messagingSenderId: "1071245303408",
+            appId: "1:1071245303408:web:1ff9b43b6f41192c079eb5",
+            measurementId: "G-ZMBDDEGE6N"
+        };
+
         firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
         const db = firebase.database();
 
-        function login() {
-            const email = prompt("Admin Email:");
-            const pass = prompt("Password:");
-            firebase.auth().signInWithEmailAndPassword(email, pass)
-                .then(() => alert("Access Granted"))
-                .catch(() => alert("Denied"));
+        function tryLogin() {
+            const e = document.getElementById('email').value;
+            const p = document.getElementById('password').value;
+            auth.signInWithEmailAndPassword(e, p).catch(err => alert(err.message));
         }
 
-        function update() {
-            const id = document.getElementById('id').value;
-            const n = document.getElementById('name').value;
-            const p = document.getElementById('price').value;
-            
-            if(!firebase.auth().currentUser) return alert("Login first!");
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                document.getElementById('login-card').style.display = 'none';
+                document.getElementById('admin-panel').style.display = 'block';
+                loadProducts();
+            }
+        });
 
-            db.ref('products/' + id).set({ n, p: parseFloat(p) })
-                .then(() => alert("Updated " + n))
-                .catch(err => alert("Error: " + err.message));
+        function saveProduct() {
+            const id = document.getElementById('productId').value;
+            const cat = document.getElementById('p-cat').value;
+            const n = document.getElementById('p-name').value;
+            const u = document.getElementById('p-unit').value; // NEW
+            const p = document.getElementById('p-price').value;
+            
+            if(!n || !p) return alert("Fill Name and Price");
+
+            // Save Note (u) as well
+            const data = { c: cat, n: n, u: u, p: parseFloat(p) };
+            
+            if(id) {
+                db.ref('products/' + id).update(data).then(() => { alert("Updated!"); clearForm(); });
+            } else {
+                db.ref('products').push(data).then(() => { alert("Added!"); clearForm(); });
+            }
+        }
+
+        function loadProducts() {
+            db.ref('products').on('value', (snap) => {
+                const list = document.getElementById('product-list');
+                list.innerHTML = "";
+                snap.forEach(child => {
+                    const data = child.val();
+                    const category = data.c || "Others";
+                    const unit = data.u ? `(${data.u})` : ""; // Show unit if exists
+                    
+                    list.innerHTML += `
+                        <div style="border-bottom:1px solid #eee; padding:10px;">
+                            <small style="color:#888; font-weight:bold;">${category.toUpperCase()}</small><br>
+                            <b>${data.n}</b> <small>${unit}</small> - ₱${data.p}
+                            <button class="btn-edit" onclick="edit('${child.key}','${data.n}','${data.p}', '${category}', '${data.u || ''}')">Edit</button>
+                        </div>`;
+                });
+            });
+        }
+
+        function edit(id, n, p, c, u) {
+            document.getElementById('productId').value = id;
+            document.getElementById('p-name').value = n;
+            document.getElementById('p-price').value = p;
+            document.getElementById('p-cat').value = c;
+            document.getElementById('p-unit').value = u; // Fill Unit
+            window.scrollTo(0,0);
+        }
+
+        function clearForm() {
+            document.getElementById('productId').value = "";
+            document.getElementById('p-name').value = "";
+            document.getElementById('p-unit').value = "";
+            document.getElementById('p-price').value = "";
         }
     </script>
 </body>
